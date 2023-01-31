@@ -189,17 +189,17 @@ timer_interrupt (struct intr_frame *args UNUSED)
 	struct thread* t;
   ticks++;
 	
-	for(e = list_begin(&sleeped_list); e != list_end(&sleeped_list); ){
-		t = list_entry(e, struct thread, elem);
-		if(timer_elapsed(t->start_sleep_time) >= t->sleep_time){
-			e = list_remove(e);
-			thread_unblock(t);
-		}
-		else e = list_next(e);
-	}
+	// for(e = list_begin(&sleeped_list); e != list_end(&sleeped_list); ){
+	// 	t = list_entry(e, struct thread, elem);
+	// 	if(timer_elapsed(t->start_sleep_time) >= t->sleep_time){
+	// 		e = list_remove(e);
+	// 		thread_unblock(t);
+	// 	}
+	// 	else e = list_next(e);
+	// }
 	
-	if(thread_prior_aging || thread_mlfqs){
-		thread_current()->recent_cpu = float_add_int(thread_current()->recent_cpu, 1); /*update recent_cpu*/
+	if(thread_mlfqs){
+		thread_current()->recent_cpu = fp_add_int(thread_current()->recent_cpu, 1); /*update recent_cpu*/
 		if(ticks % TIMER_FREQ == 0)
 			update_values();
 		if(ticks % 4 == 0)

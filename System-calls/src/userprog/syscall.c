@@ -196,10 +196,16 @@ static struct open_file *get_file_by_fd(const int fd)
     STATUS to the kernel. If the process’s parent
     waits for it, this is the status that will be
     returned. Conventionally, a status of 0 indicates
-    success and nonzero values indicate errors. */
+    success and nonzero values indicate errors. 
+    
+    -tại sao nó lại đc gọi là systerm call: một tiến trình 
+    máy tính kết thúc quá trình thực thi của nó bằng cách thực 
+    hiện lệnh gọi thoát hệ thống nhằm thông báo cho kenel 
+    Để quản lý tài nguyên , hệ điều hành thu hồi các tài nguyên ( bộ nhớ , tệp , v.v.) 
+    đã được sử dụng bởi tiến trình. */
 static void exit(int status)
 {
-    struct process *self = thread_current()->process;
+    struct process *self = thread_current()->process;//tiến trình hiện tại đang chạy
 
     while (!list_empty(&self->files))
     {
@@ -256,7 +262,9 @@ static int write(int fd, const void *buffer, unsigned size)
     Thus, the parent process cannot return from the
     exec until it knows whether the child process
     successfully loaded its executable. Use appropriate
-    synchronization to ensure this. */
+    synchronization to ensure this. 
+    
+    */
 static pid_t exec(const char *cmd_line)
 {
     USER_ASSERT(is_valid_str(cmd_line));

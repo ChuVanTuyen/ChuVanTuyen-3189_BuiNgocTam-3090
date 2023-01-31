@@ -379,18 +379,11 @@ thread_set_nice (int nice UNUSED)
 	struct thread* t = thread_current();
 	
 	t->nice = nice;
-	t->priority = float_sub_float(float_sub_float(PRI_MAX*CONVERT, float_div_int(t->recent_cpu, 4)), float_mul_int(t->nice * CONVERT, 2)) / CONVERT;
+	t->priority = fp_sub_fp(fp_sub_fp(PRI_MAX*CONVERT, fp_div_int(t->recent_cpu, 4)), fp_mul_int(t->nice * CONVERT, 2)) / CONVERT;
 	if(t->priority < PRI_MIN)
 		t->priority = PRI_MIN;
 	else if (t->priority > PRI_MAX)
 		t->priority = PRI_MAX;
-
-	/*chk whether running thread has larger than any other new priority in waiting threads. OTHERWISE YIELD ON RETURN as it is currently interrupted*/
-	int max_prior = -1;
-	if(!list_empty(&ready_list))
-		max_prior = list_entry(list_front(&ready_list), struct thread, elem)->priority;
-	if(t->priority < max_prior)
-		thread_yield();
 }
 
 /* Returns the current thread's nice value. */
@@ -404,14 +397,14 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void) 
 {
-  return float_mul_int(load_avg, 100)/CONVERT;
+  return fp_mul_int(load_avg, 100)/CONVERT;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  return float_mul_int(thread_current()->recent_cpu, 100)/CONVERT;
+  return fp_mul_int(thread_current()->recent_cpu, 100)/CONVERT;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -642,37 +635,37 @@ allocate_tid (void)
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
-int float_add_int(int a, int b){
+int fp_add_int(int a, int b){
 	return a + b * CONVERT;
 }
 
-int float_sub_int(int a, int b){
+int fp_sub_int(int a, int b){
 	return a - b * CONVERT;
 }
 
-int float_mul_int(int a, int b){
+int fp_mul_int(int a, int b){
 	return a * b;
 }
 
-int float_div_int(int a, int b){
+int fp_div_int(int a, int b){
 	return a / b;
 }
 
-int float_add_float(int a, int b){
+int fp_add_fp(int a, int b){
 	return a + b;
 }
 
-int float_sub_float(int a, int b){
+int fp_sub_fp(int a, int b){
 	return a - b;
 }
 
-int float_mul_float(int a, int b){
+int fp_mul_fp(int a, int b){
 	int64_t tmp = (int64_t) a;
 	tmp = tmp * b / CONVERT;
 	return (int) tmp;
 }
 
-int float_div_float(int a, int b){
+int fp_div_fp(int a, int b){
 	int64_t tmp = (int64_t) a;
 	tmp = tmp * CONVERT / b;
 	return (int) tmp;
@@ -687,12 +680,12 @@ void update_values(void){ /*should be updated every second*/
 	else
 		ready_threads = list_size(&ready_list) + 1;
 
-	load_avg = float_div_float(float_add_int(float_mul_int(load_avg, 59), ready_threads), 60*CONVERT);
+	load_avg = fp_div_fp(fp_add_int(fp_mul_int(load_avg, 59), ready_threads), 60*CONVERT);
 	
   for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
 		struct thread *t = list_entry (e, struct thread, allelem);
 		if(t != idle_thread){
-			t->recent_cpu = float_add_int(float_mul_float(float_div_float(float_mul_int(load_avg, 2), float_add_int(float_mul_int(load_avg, 2), 1)), t->recent_cpu), t->nice); /*(2 * load_avg)/(2 * load_avg + 1) * recent_cpu + nice*/
+			t->recent_cpu = fp_add_int(fp_mul_fp(fp_div_fp(fp_mul_int(load_avg, 2), fp_add_int(fp_mul_int(load_avg, 2), 1)), t->recent_cpu), t->nice); /*(2 * load_avg)/(2 * load_avg + 1) * recent_cpu + nice*/
 		}
   }
 }
@@ -704,19 +697,12 @@ void update_priority(void){ /*should be updated every four ticks*/
 	/*update new priority*/
 	for (e = list_begin (&all_list); e != list_end (&all_list); e = list_next (e)){
 		struct thread *t = list_entry (e, struct thread, allelem);
-		tmp = float_sub_float(float_sub_float(PRI_MAX*CONVERT, float_div_int(t->recent_cpu, 4)), float_mul_int(t->nice * CONVERT, 2)) / CONVERT;
+		tmp = fp_sub_fp(fp_sub_fp(PRI_MAX*CONVERT, fp_div_int(t->recent_cpu, 4)), fp_mul_int(t->nice * CONVERT, 2)) / CONVERT;
 		if(tmp < PRI_MIN)
 			t->priority = PRI_MIN;
 		else if (tmp > PRI_MAX)
 			t->priority = PRI_MAX;
 		else t->priority = tmp;
 	}
-	
-	/*chk whether running thread has larger than any other new priority in waiting threads. OTHERWISE YIELD ON RETURN as it is currently interrupted*/
-	tmp = -1;
-	if(!list_empty(&ready_list))
-		tmp = list_entry(list_front(&ready_list), struct thread, elem)->priority;
-	
-	if(thread_current()->priority < tmp)
-		intr_yield_on_return();
+
 }

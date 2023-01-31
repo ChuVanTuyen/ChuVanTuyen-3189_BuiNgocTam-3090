@@ -57,49 +57,21 @@ void process_init(void)
    thread id, or TID_ERROR if the thread cannot be created. */
 tid_t process_execute(const char *file_name)
 {
-    if (process_num == PROCESS_NUM_LIMIT)
-        return TID_ERROR;
-    ++process_num;
+    char *fn_copy;
+  tid_t tid;
 
-    char *fn_copy0, *fn_copy1;
-    tid_t tid;
+  /* Make a copy of FILE_NAME.
+     Otherwise there's a race between the caller and load(). */
+  fn_copy = palloc_get_page (0);
+  if (fn_copy == NULL)
+    return TID_ERROR;
+  strlcpy (fn_copy, file_name, PGSIZE);
 
-    /* Make a copy of FILE_NAME.
-       Otherwise strtok_r will modify the const char *file_name. */
-    fn_copy0 = palloc_get_page(0);
-    if (fn_copy0 == NULL)
-        return TID_ERROR;
-
-    /* Make a copy of FILE_NAME.
-       Otherwise there's a race between the caller and load(). */
-    fn_copy1 = palloc_get_page(0);
-    if (fn_copy1 == NULL)
-    {
-        palloc_free_page(fn_copy0);
-        return TID_ERROR;
-    }
-
-    strlcpy(fn_copy0, file_name, PGSIZE);
-    strlcpy(fn_copy1, file_name, PGSIZE);
-
-    /* Create a new thread to execute FILE_NAME. */
-    char *save_ptr;
-    char *cmd = strtok_r(fn_copy0, " ", &save_ptr);
-    tid = thread_create(cmd, PRI_DEFAULT, start_process, fn_copy1);
-    if (tid == TID_ERROR)
-        palloc_free_page(fn_copy1);
-
-    palloc_free_page(fn_copy0);
-
-    if (thread_current()->tid != 1 && tid != TID_ERROR)
-    {
-        struct process *self = thread_current()->process;
-        struct process *child = get_process(tid);
-        child->parent = self;
-        list_push_back(&self->children, &child->elem);
-    }
-
-    return tid;
+  /* Create a new thread to execute FILE_NAME. */
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  if (tid == TID_ERROR)
+    palloc_free_page (fn_copy); 
+  return tid;
 }
 
 /* A thread function that loads a user process and starts it
